@@ -75,6 +75,7 @@ class AI2:
         # print(response)
         # print("Response content:", response.choices[0].message.reasoning_content)
         
+        return response.choices[0].message.content.strip()
         # 解析并验证JSON输出
         try:
             resp = response.choices[0].message.content.strip()
@@ -86,6 +87,7 @@ class AI2:
             resp = resp.strip()
             if not resp.startswith("{") or not resp.endswith("}"):
                 raise ValueError("Response is not a valid JSON object")
+            print(resp)
             result = json.loads(resp)
             if not isinstance(result.get("points", []), list):
                 raise ValueError("Invalid JSON structure")
