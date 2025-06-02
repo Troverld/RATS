@@ -31,5 +31,6 @@ class AI3:
         ]
         )
 
-        print(response)
-        print(response.choices[0].message.content)
+        #print(response)
+        #print(response.choices[0].message.content)
+        return response.choices[0].message.content
