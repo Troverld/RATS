@@ -56,27 +56,8 @@ def partition_points(question: str, answer: str) -> str:
 
 
 
-def toggle_answer_upload_visibility(mode):
-    return {"visible": mode == "upload", "__type__": "update"}
-
-
-def toggle_question_preview(content, current_visibility):
-    """切换问题预览显示状态"""
-    if current_visibility:
-        return None, False
-    else:
-        return content, True
-
-
-def toggle_answer_preview(content, current_visibility):
-    """切换解答预览显示状态"""
-    if current_visibility:
-        return None, False
-    else:
-        return content, True
-    
-def toggle_keypoints_preview(content, current_visibility):
-    """切换 keypoints 预览显示状态"""
+def toggle_preview(content, current_visibility):
+    """切换预览显示状态"""
     if current_visibility:
         return None, False
     else:
@@ -189,7 +170,7 @@ with gr.Blocks(title="双文档分析系统") as app:
     
     # === 预览事件 ===
     question_preview_btn.click(
-        fn=toggle_question_preview,
+        fn=toggle_preview,
         inputs=[question_state, question_preview_visible],
         outputs=[question_preview, question_preview_visible]
     ).then(
@@ -199,7 +180,7 @@ with gr.Blocks(title="双文档分析系统") as app:
     )
     
     answer_preview_btn.click(
-        fn=toggle_answer_preview,
+        fn=toggle_preview,
         inputs=[answer_state, answer_preview_visible],
         outputs=[answer_preview, answer_preview_visible]
     ).then(
@@ -226,7 +207,7 @@ with gr.Blocks(title="双文档分析系统") as app:
     
     # === 要点预览事件 ===
     keypoints_preview_btn.click(
-        fn=toggle_keypoints_preview,
+        fn=toggle_preview,
         inputs=[keypoints_state, keypoints_preview_visible],
         outputs=[keypoints_preview, keypoints_preview_visible]
     ).then(
