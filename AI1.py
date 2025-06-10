@@ -172,3 +172,21 @@ class AI1:
         # 执行链并返回结果
         self.solution=chain.invoke({"question": self.question})
 
+    def polish_text(self, text):
+        # print(f"Original text for polishing: {text[:100]}...")  # Print first 100 characters for debugging
+        response = self.client.chat.completions.create(
+            model=self.t_model,
+            messages=[
+                {"role": "system", "content": """
+                    Perform the following text processing:
+                    1. Correct grammar and punctuation errors
+                    2. Convert mathematical expressions to LaTeX (e.g., x^2 → $x^2$)
+                    3. Preserve all technical terms, code blocks, and original formatting
+                    
+                    Return ONLY the processed text without any explanations or additional commentary. Do not add anything else except the processed text.
+                    """},
+                {"role": "user", "content": text},
+            ]
+        )
+        # print(f"Polished text: {response.choices[0].message.content.strip()[:100]}...")
+        return response.choices[0].message.content.strip()
