@@ -8,12 +8,6 @@ identifier = AI1()
 patitor = AI2()
 addresser = AI3()
 
-def loads_preserve_backslashes_v2(raw_json: str):
-    # 把每个 '\' 先替换成 '\\'
-    # print(raw_json)
-    tmp = raw_json.replace('\\', '\\\\')
-    # print(tmp)
-    return tmp
 
 def process_all(question_file, question_text, answer_file, answer_text, question_mode, answer_mode):
     """处理所有输入并生成解答（如果需要）"""
@@ -25,7 +19,7 @@ def process_all(question_file, question_text, answer_file, answer_text, question
     else:
         raise ValueError("Unsupported question mode. Please select 'upload' or 'direct_input'.")
     identifier.set_question(question_content)
-    # print(f"Processed question: {identifier.question}")
+    print(f"Processed question: {identifier.question[:100]}")
     
     if answer_mode == "upload":
         answer_content = identifier.identify_from_input(answer_file)
@@ -37,8 +31,10 @@ def process_all(question_file, question_text, answer_file, answer_text, question
         identifier.direct_generate()
     elif answer_mode == "search_and_generate":
         identifier.search_from_internet()
+    else:
+        raise ValueError("Unsupported answer mode. Please select 'upload', 'direct_input', 'direct_generate', or 'search_and_generate'.")
 
-    # print(f"Processed answer: {identifier.solution}")
+    print(f"Processed answer: {identifier.solution[:100]}")
 
     return identifier.question, identifier.solution
 
@@ -52,30 +48,16 @@ def toggle_input_visibility(mode):
 def partition_points(question: str, answer: str) -> str:
     if not question or not answer:
         return '{"points": []}'
-    return loads_preserve_backslashes_v2(patitor.partitioning_points(question, answer))
+    return patitor.partitioning_points(question, answer)
 
-
-def address_question(question: str, solution: str,points: str,idx: int,prompt: str) -> str:
-    """使用addresser处理用户问题"""
-    if not isinstance(idx, int) or idx <= 0:
-        return "请输入一个正整数(1-indexed)"
-    return addresser.address(question,solution,points,idx,prompt)
-
-def toggle_preview(content, current_visibility):
-    """切换预览显示状态"""
+def toggle_input_preview(content, current_visibility):
+    """切换问题预览显示状态"""
     if current_visibility:
         return None, False
     else:
         return content, True
-    
-css = """
-.success-btn {
-    background: #4CAF50 !important;  /* 绿色 */
-    color: white !important;
-}
-"""
 
-with gr.Blocks(title="RATS：集成式智能提示者", css=css) as app:
+with gr.Blocks(title="双文档分析系统") as app:
     # === 状态存储 ===
     question_state = gr.State()
     answer_state = gr.State()
@@ -88,10 +70,10 @@ with gr.Blocks(title="RATS：集成式智能提示者", css=css) as app:
         # === 上传区 ===
     with gr.Row():
         with gr.Column(variant="panel"):
-            gr.Markdown("### 1. 上传感兴趣的问题")
+            gr.Markdown("### 1. 问题输入")
             question_mode_radio = gr.Radio(
                 choices=[
-                    ("上传问题文件", "upload"),
+                    ("上传解答文件", "upload"),
                     ("直接输入文本", "direct_input"),
                 ],
                 label="选择问题模式",
@@ -99,8 +81,7 @@ with gr.Blocks(title="RATS：集成式智能提示者", css=css) as app:
             )
             question_upload = gr.File(
                 file_types=[".pdf", ".png", ".txt", ".md", ".jpg", ".jpeg"],
-                label="拖入问题文件，或点击选择文件（支持 .pdf, .png, .txt, .md, .jpg, .jpeg）",
-                file_count="single",
+                label="拖放问题文件",
                 height=50,
                 visible=True
             )
@@ -111,7 +92,7 @@ with gr.Blocks(title="RATS：集成式智能提示者", css=css) as app:
                 interactive=True,
                 visible=False
             )
-            question_preview_btn = gr.Button("预览问题（仅供参考）", visible=False)
+            question_preview_btn = gr.Button("预览问题内容", visible=False)
             question_preview = gr.Textbox(label="问题内容预览", lines=5, interactive=False, visible=False)
 
         with gr.Column(variant="panel"):
@@ -139,44 +120,18 @@ with gr.Blocks(title="RATS：集成式智能提示者", css=css) as app:
                 interactive=True,
                 visible=False
             )
-            answer_preview_btn = gr.Button("预览解答（仅供参考）", visible=False)
+            answer_preview_btn = gr.Button("预览解答内容", visible=False)
             answer_preview = gr.Textbox(label="解答内容预览", lines=5, interactive=False, visible=False)
 
-    with gr.Column():
-        with gr.Row():
-            process_btn = gr.Button("处理内容", variant="primary")
-            partition_btn = gr.Button("分解要点", visible=False, variant="primary")
-        with gr.Row():
-            keypoints_preview_btn = gr.Button("预览分解（仅供参考）", visible=False)
-            keypoints_preview = gr.JSON(label="要点分解结果", visible=False)
+    with gr.Row():
+        # === 分析按钮 ===
+        process_btn = gr.Button("处理内容", variant="primary")
+        
+        # === 分解要点按钮 ===
+        partition_btn = gr.Button("分解要点", visible=False, variant="primary")
+        keypoints_preview_btn = gr.Button("预览要点分解结果", visible=False)
+        keypoints_preview = gr.JSON(label="要点分解结果", visible=False)
 
-    # === Addresser 功能区 ===
-    with gr.Row(variant="panel"):
-        with gr.Column():
-            gr.Markdown("### 3. 问题处理")
-            address_number = gr.Number(
-                label="输入一个正整数",
-                value=1,
-                precision=0,
-                minimum=1,
-                interactive=True,
-                visible=False
-            )
-            address_question_input = gr.Textbox(
-                label="输入您的问题",
-                lines=3,
-                placeholder="在此输入您的问题...",
-                interactive=True,
-                visible=False
-            )
-            address_btn = gr.Button("处理问题", variant="primary",
-                visible=False)
-            address_output = gr.Textbox(
-                label="处理结果",
-                lines=5,
-                interactive=False,
-                visible=False
-            )
     # === 模式切换事件 ===
 
     question_mode_radio.change(
@@ -203,13 +158,13 @@ with gr.Blocks(title="RATS：集成式智能提示者", css=css) as app:
         fn=lambda: [gr.Button(visible=True), gr.Button(visible=True), gr.Button(visible=True)],
         outputs=[question_preview_btn, answer_preview_btn, partition_btn]
     ).then(
-        fn=lambda: gr.Button(value="已处理√ 点击再次处理", interactive=True, elem_classes="success-btn"),
+        fn=lambda: gr.Button(value="处理内容", interactive=True),
         outputs=process_btn
     )
     
     # === 预览事件 ===
     question_preview_btn.click(
-        fn=toggle_preview,
+        fn=toggle_input_preview,
         inputs=[question_state, question_preview_visible],
         outputs=[question_preview, question_preview_visible]
     ).then(
@@ -219,7 +174,7 @@ with gr.Blocks(title="RATS：集成式智能提示者", css=css) as app:
     )
     
     answer_preview_btn.click(
-        fn=toggle_preview,
+        fn=toggle_input_preview,
         inputs=[answer_state, answer_preview_visible],
         outputs=[answer_preview, answer_preview_visible]
     ).then(
@@ -230,45 +185,32 @@ with gr.Blocks(title="RATS：集成式智能提示者", css=css) as app:
 
     # === 分解要点事件 ===
     partition_btn.click(
-        fn=lambda: gr.Button(value="分解中...（较慢，请耐心等待）", interactive=False, variant="primary"),
+        fn=lambda: gr.Button(value="分解中...", interactive=False, variant="primary"),
         outputs=partition_btn
     ).then(
         fn=partition_points,
         inputs=[question_state, answer_state],
         outputs=[keypoints_state]
     ).then(
-        fn=lambda: [gr.update(visible=True),gr.update(visible=True),gr.update(visible=True),gr.update(visible=True)],
-        outputs=[keypoints_preview_btn,address_number,address_question_input,address_btn]
+        fn=lambda: gr.update(visible=True),
+        outputs=[keypoints_preview_btn]
     ).then(
-        fn=lambda: gr.Button(value="已分解√ 点击重新分解", interactive=True, elem_classes="success-btn"),
+        fn=lambda: gr.Button(value="分解要点", interactive=True, variant="primary"),
         outputs=partition_btn
     )
     
     # === 要点预览事件 ===
     keypoints_preview_btn.click(
-        fn=toggle_preview,
+        fn=toggle_input_preview,
         inputs=[keypoints_state, keypoints_preview_visible],
         outputs=[keypoints_preview, keypoints_preview_visible]
     ).then(
-        fn=lambda vis:gr.update(visible=vis),
-        inputs=keypoints_preview_visible,
-        outputs=keypoints_preview
-    )
-    
-    # === Addresser 处理事件 ===
-    address_btn.click(
-        fn=lambda: gr.Button(value="处理中...", interactive=False),
-        outputs=address_btn
-    ).then(
-        fn=address_question,
-        inputs=[question_state,answer_state,keypoints_state,address_number, address_question_input],
-        outputs=address_output
-    ).then(
-        fn=lambda: gr.update(visible=True),
-        outputs=address_output
-    ).then(
-        fn=lambda: gr.Button(value="处理问题", interactive=True),
-        outputs=address_btn
+        fn=lambda content, vis: gr.update(
+            value=json.loads(content) if content is not None else None,
+            visible=vis
+        ),
+        inputs=[keypoints_preview, keypoints_preview_visible],
+        outputs=[keypoints_preview]
     )
 
 app.launch()

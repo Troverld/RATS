@@ -16,7 +16,7 @@ class AI1:
         openai_base_url = os.environ.get("INFINI_BASE_URL")
         self.client = OpenAI(api_key=openai_api_key, base_url=openai_base_url)
         self.v_model="qwen2.5-vl-72b-instruct"
-        self.t_model="deepseek-r1-distill-qwen-32b"
+        self.t_model="deepseek-v3"
         self.chat_model = ChatOpenAI(
             temperature=0, 
             model=self.t_model,
