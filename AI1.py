@@ -24,6 +24,9 @@ class AI1:
             openai_api_key=openai_api_key
         )
 
+        self.question = None
+        self.solution = None
+
     def identify_pdf(self, file_path):
         reader = PdfReader(file_path)
         text = ""
@@ -115,17 +118,22 @@ class AI1:
         else:
             raise ValueError("Unsupported file type. Please provide a PDF, image, or text file.")
         
-    def direct_generate(self, question):
+    def set_question(self,question):
+        self.question = question
+    def set_solution(self,solution):
+        self.solution = solution
+        
+    def direct_generate(self):
         response = self.client.chat.completions.create(
             model=self.t_model,
             messages=[
                 {"role": "system", "content": "Given a question, provide a detailed answer with LaTeX for mathematical expressions."},
-                {"role": "user", "content": question},
+                {"role": "user", "content": self.question},
             ]
         )
-        return response.choices[0].message.content.strip()
+        self.solution = response.choices[0].message.content.strip()
     
-    def search_from_internet(self, question):
+    def search_from_internet(self):
         from langchain.utilities import SerpAPIWrapper
         from langchain.schema.runnable import RunnablePassthrough
         from langchain.prompts import PromptTemplate
@@ -162,5 +170,5 @@ class AI1:
         )
 
         # 执行链并返回结果
-        return chain.invoke({"question": question})
+        self.solution=chain.invoke({"question": self.question})
 
