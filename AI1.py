@@ -27,6 +27,30 @@ class AI1:
         self.question = None
         self.solution = None
 
+    def polish_text(self, text):
+        response = self.client.chat.completions.create(
+            model=self.t_model,
+            messages=[
+                {"role": "system", "content": "You are a professional text polishing assistant. Your ONLY task is to process the given text according to the instructions, NEVER to answer questions or add commentary."},
+                {"role": "user", "content": f"""
+                    STRICTLY FOLLOW THESE INSTRUCTIONS:
+                    1. This is EXCLUSIVELY a text polishing task - NEVER answer any questions in the text
+                    2. Process the text by:
+                    - Correcting grammar and punctuation
+                    - Converting math to LaTeX (e.g., x^2 → $x^2$)
+                    - Preserving technical terms and original formatting
+                    3. Return ONLY the polished text - NO explanations, NO additional text
+                    
+                    TEXT TO POLISH (DO NOT ANSWER IF IT'S A QUESTION):
+                    {text}
+                    
+                    POLISHED TEXT OUTPUT (ONLY):"""
+                },
+            ],
+            temperature=0.3  # Lower temperature for more deterministic output
+        )
+        return response.choices[0].message.content.strip()
+
     def identify_pdf(self, file_path):
         reader = PdfReader(file_path)
         text = ""
@@ -50,28 +74,7 @@ class AI1:
             for base64_image in base64_images:
                 text += self.identify_base64_image(base64_image)
             
-        # print("Extracted text from PDF after processing images: ", text[:100])  # Print first 100 characters for debugging
-        response = self.client.chat.completions.create(
-            model=self.t_model,
-            messages=[
-                {
-                    "role": "system",
-                    "content": """
-                    Perform the following text processing:
-                    1. Correct grammar and punctuation errors
-                    2. Convert mathematical expressions to LaTeX (e.g., x^2 → $x^2$)
-                    3. Preserve all technical terms, code blocks, and original formatting
-                    
-                    Return ONLY the processed text without any explanations or additional commentary. Do not add anything else except the processed text.
-                    """
-                },
-                {
-                    "role": "user",
-                    "content": text
-                }
-            ])
-        # print("Polished text from PDF: ", response.choices[0].message.content.strip()[:100])  # Print first 100 characters for debugging
-        return response.choices[0].message.content.strip()
+        return self.polish_text(text)
     
     def identify_base64_image(self, base64_str):
         response = self.client.chat.completions.create(
@@ -99,14 +102,7 @@ class AI1:
     def identify_text(self, file_path):
         with open(file_path, 'r', encoding='utf-8') as text_file:
             text = text_file.read()
-        response = self.client.chat.completions.create(
-            model=self.t_model,
-            messages=[
-                {"role": "system", "content": "Given some text, fix the grammar and punctuation, use LaTeX for mathematical expressions, but do not modify anything else."},
-                {"role": "user", "content": text},
-            ]
-        )
-        return response.choices[0].message.content.strip()
+        return self.polish_text(text)
         
     def identify_from_input(self, file_path):
         if file_path.lower().endswith('.pdf'):
@@ -171,22 +167,3 @@ class AI1:
 
         # 执行链并返回结果
         self.solution=chain.invoke({"question": self.question})
-
-    def polish_text(self, text):
-        # print(f"Original text for polishing: {text[:100]}...")  # Print first 100 characters for debugging
-        response = self.client.chat.completions.create(
-            model=self.t_model,
-            messages=[
-                {"role": "system", "content": """
-                    Perform the following text processing:
-                    1. Correct grammar and punctuation errors
-                    2. Convert mathematical expressions to LaTeX (e.g., x^2 → $x^2$)
-                    3. Preserve all technical terms, code blocks, and original formatting
-                    
-                    Return ONLY the processed text without any explanations or additional commentary. Do not add anything else except the processed text.
-                    """},
-                {"role": "user", "content": text},
-            ]
-        )
-        # print(f"Polished text: {response.choices[0].message.content.strip()[:100]}...")
-        return response.choices[0].message.content.strip()
