@@ -1,0 +1,9 @@
+openai
+dotenv
+langchain_openai
+langchain_community
+langchain
+json
+pdf2image
+PyPDF2
+gradio

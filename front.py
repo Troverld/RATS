@@ -49,10 +49,10 @@ def toggle_input_visibility(mode):
         {"visible": mode == "direct_input", "__type__": "update"}
     ]
 
-def partition_points(question: str, answer: str) -> str:
+def partition_points(question: str, answer: str) -> list:
     if not question or not answer:
-        return '{"points": []}'
-    return loads_preserve_backslashes_v2(patitor.partitioning_points(question, answer))
+        return []
+    return patitor.partitioning_points(question, answer)
 
 
 def address_question(question: str, solution: str,points: str,idx: int,prompt: str) -> str:
@@ -67,7 +67,19 @@ def toggle_preview(content, current_visibility):
         return None, False
     else:
         return content, True
-    
+
+def show_sketch(keypoints, idx):
+    """显示要点内容"""
+    if not keypoints or idx < 1 or idx > len(keypoints):
+        return "无效的索引"
+    return keypoints[idx-1][0]
+
+def show_origin(keypoints, idx):
+    """显示原文内容"""
+    if not keypoints or idx < 1 or idx > len(keypoints):
+        return "无效的索引"
+    return keypoints[idx-1][1]
+
 css = """
 .success-btn {
     background: #4CAF50 !important;  /* 绿色 */
@@ -101,7 +113,7 @@ with gr.Blocks(title="RATS：集成式智能提示者", css=css) as app:
                 file_types=[".pdf", ".png", ".txt", ".md", ".jpg", ".jpeg"],
                 label="拖入问题文件，或点击选择文件（支持 .pdf, .png, .txt, .md, .jpg, .jpeg）",
                 file_count="single",
-                height=50,
+                height=150,
                 visible=True
             )
             question_text = gr.Textbox(
@@ -129,7 +141,7 @@ with gr.Blocks(title="RATS：集成式智能提示者", css=css) as app:
             answer_upload = gr.File(
                 file_types=[".pdf", ".png", ".txt", ".md", ".jpg", ".jpeg"],
                 label="拖放解答文件",
-                height=50,
+                height=150,
                 visible=True
             )
             answer_text = gr.Textbox(
@@ -154,23 +166,24 @@ with gr.Blocks(title="RATS：集成式智能提示者", css=css) as app:
     with gr.Row(variant="panel"):
         with gr.Column():
             gr.Markdown("### 3. 问题处理")
-            address_number = gr.Number(
-                label="输入一个正整数",
-                value=1,
-                precision=0,
-                minimum=1,
-                interactive=True,
-                visible=False
-            )
+            with gr.Row():
+                address_number = gr.Dropdown(
+                    label="输入你关心的选项",
+                    choices = [0,1,6,4],
+                    interactive=True,
+                    visible=False
+                )
+                address_sketch_btn = gr.Button("查看要点", variant="primary", visible=False)
+                address_origin_btn = gr.Button("查看原文", variant="primary", visible=False)
+                address_question_btn = gr.Button("提出问题", variant="primary", visible=False)
+                question_submit_btn = gr.Button("确认提问", variant="primary", visible=False)
             address_question_input = gr.Textbox(
-                label="输入您的问题",
-                lines=3,
-                placeholder="在此输入您的问题...",
-                interactive=True,
-                visible=False
-            )
-            address_btn = gr.Button("处理问题", variant="primary",
-                visible=False)
+                    label="输入您的问题",
+                    lines=3,
+                    placeholder="在此输入您的问题...",
+                    interactive=True,
+                    visible=False
+                )
             address_output = gr.Textbox(
                 label="处理结果",
                 lines=5,
@@ -237,8 +250,12 @@ with gr.Blocks(title="RATS：集成式智能提示者", css=css) as app:
         inputs=[question_state, answer_state],
         outputs=[keypoints_state]
     ).then(
-        fn=lambda: [gr.update(visible=True),gr.update(visible=True),gr.update(visible=True),gr.update(visible=True)],
-        outputs=[keypoints_preview_btn,address_number,address_question_input,address_btn]
+        fn=lambda keypoints: gr.update(choices=range(1,len(keypoints)+1)),
+        inputs=keypoints_state,
+        outputs=address_number
+    ).then(
+        fn=lambda: [gr.update(visible=True),gr.update(visible=True),gr.update(visible=True),gr.update(visible=True),gr.update(visible=True)],
+        outputs=[keypoints_preview_btn,address_number,address_sketch_btn,address_origin_btn,address_question_btn]
     ).then(
         fn=lambda: gr.Button(value="已分解√ 点击重新分解", interactive=True, elem_classes="success-btn"),
         outputs=partition_btn
@@ -256,19 +273,54 @@ with gr.Blocks(title="RATS：集成式智能提示者", css=css) as app:
     )
     
     # === Addresser 处理事件 ===
-    address_btn.click(
+    address_sketch_btn.click(
         fn=lambda: gr.Button(value="处理中...", interactive=False),
-        outputs=address_btn
+        outputs=address_sketch_btn
+    ).then(
+        fn=lambda: [gr.update(visible=False), gr.update(visible=True), gr.update(visible=False) , gr.update(visible=True)],
+        outputs=[address_question_input, address_question_btn, question_submit_btn,address_output]
+    ).then(
+        fn=show_sketch,
+        inputs=[keypoints_state, address_number],
+        outputs=address_output
+    ).then(
+        fn=lambda: gr.Button(value="查看要点", interactive=True),
+        outputs=address_sketch_btn
+    )
+
+    address_origin_btn.click(
+        fn=lambda: gr.Button(value="处理中...", interactive=False),
+        outputs=address_origin_btn
+    ).then(
+        fn=lambda: [gr.update(visible=False), gr.update(visible=True), gr.update(visible=False) , gr.update(visible=True)],
+        outputs=[address_question_input, address_question_btn, question_submit_btn,address_output]
+    ).then(
+        fn=show_origin,
+        inputs=[keypoints_state, address_number],
+        outputs=address_output
+    ).then(
+        fn=lambda: gr.Button(value="查看原文", interactive=True),
+        outputs=address_origin_btn
+    )
+
+    address_question_btn.click(
+        fn=lambda: [gr.update(visible=True),gr.update(visible=False),gr.update(visible=True)],
+        outputs=[address_question_input, address_question_btn, question_submit_btn]
+    )
+
+    question_submit_btn.click(
+        fn=lambda: gr.Button(value="处理中...", interactive=False),
+        outputs=question_submit_btn
     ).then(
         fn=address_question,
-        inputs=[question_state,answer_state,keypoints_state,address_number, address_question_input],
+        inputs=[question_state, answer_state, keypoints_state, address_number, address_question_input],
         outputs=address_output
     ).then(
         fn=lambda: gr.update(visible=True),
         outputs=address_output
     ).then(
-        fn=lambda: gr.Button(value="处理问题", interactive=True),
-        outputs=address_btn
+        fn=lambda: gr.Button(value="确认提问", interactive=True),
+        outputs=question_submit_btn
     )
 
 app.launch()
