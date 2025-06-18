@@ -14,6 +14,17 @@ Target user: Everyone! (Especially those who study science)
 
 First, install all libraries from `requirements.txt`.
 
+Second, create a `.env` file in the root directory, and write the following things:
+
+```
+INFINI_BASE_URL="Your LLM API url"
+INFINI_API_KEY="Your LLM API key"
+```
+
+You need to use your own keys. (Of course we won't reveal ours!)
+
 Then, run `front.py`, and a graphical interface will be automatically created on your browser.
 
-Finally, may follow the instructions on the interface, and enjoy the detailed hints provided by RATS!
+Finally, may follow the instructions on the interface, and enjoy the detailed hints provided by <font color="gold">RATS</font>!
+
+![](https://cdn.luogu.com.cn/upload/image_hosting/8h77icn2.png)
